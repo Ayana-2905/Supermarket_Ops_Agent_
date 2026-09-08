@@ -42,6 +42,18 @@ All demonstrations below were performed through the **Telegram interface**.
 
 ![Finalized Bill](7.finalize_bill.png)
 
+**Invoice generation:** Automatically generated and sent the GST invoice PDF after sale confirmation.
+
+![Invoice PDF Generated](8.invoice_pdf_generated.png)
+
+---
+
+## 4. Sales Analysis
+
+**Sales analysis:** Generated the sales analysis PowerPoint on request.
+
+![Sales Analysis PPT](9.sales_analysis_ppt.png)
+
 ---
 
 ## Verified Features
@@ -54,6 +66,8 @@ All demonstrations below were performed through the **Telegram interface**.
 - ✅ Product count
 - ✅ Draft billing
 - ✅ Sale confirmation & finalization
+- ✅ Automatic GST invoice PDF
+- ✅ Sales analysis PPT
 - ✅ Khata balance
 - ✅ Khata transactions
 - ✅ Khata payment/settlement
