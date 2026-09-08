@@ -8,19 +8,19 @@ All demonstrations below were performed through the **Telegram interface**.
 
 **Stock lookup:** Checked the current quantity of a product through Telegram.
 
-![Stock lookup](1.stock.jpeg)
+![Stock lookup](demo/1.stock.jpeg)
 
 **Low-stock check:** Identified the product with the lowest available stock.
 
-![Low stock](2.low%20on%20stock.jpeg)
+![Low stock](demo/2.low%20on%20stock.jpeg)
 
 **Receive stock:** Added incoming stock and verified the updated quantity.
 
-![Receive and check stock](3.%20received%20and%20checked%20.jpeg)
+![Receive and check stock](demo/3.%20received%20and%20checked%20.jpeg)
 
 **Inventory count and listing:** Returned the number of products currently registered and displayed the product catalog.
 
-![Product count](4.product%20count.jpeg)
+![Product count](demo/4.product%20count.jpeg)
 
 ---
 
@@ -28,7 +28,7 @@ All demonstrations below were performed through the **Telegram interface**.
 
 **Customer balance & transactions:** Checked Ramesh's balance, transaction history, and recorded a payment.
 
-![Khata](5.khata.jpeg)
+![Khata](demo/5.khata.jpeg)
 
 ---
 
@@ -36,15 +36,15 @@ All demonstrations below were performed through the **Telegram interface**.
 
 **Draft bill:** Created a bill for multiple products.
 
-![Draft Bill](6.draft_bill.png)
+![Draft Bill](demo/6.draft_bill.png)
 
 **Sale confirmation:** Confirmed the draft bill and completed the sale.
 
-![Finalized Bill](7.finalize_bill.png)
+![Finalized Bill](demo/7.finalize_bill.png)
 
 **Invoice generation:** Automatically generated and sent the GST invoice PDF after sale confirmation.
 
-![Invoice PDF Generated](8.invoice_pdf_generated.png)
+![Invoice PDF Generated](demo/8.invoice_pdf_generated.png)
 
 ---
 
@@ -52,7 +52,7 @@ All demonstrations below were performed through the **Telegram interface**.
 
 **Sales analysis:** Generated the sales analysis PowerPoint on request.
 
-![Sales Analysis PPT](9.sales_analysis_ppt.png)
+![Sales Analysis PPT](demo/9.sales_analysis_ppt.png)
 
 ---
 
