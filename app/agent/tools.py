@@ -286,28 +286,16 @@ def get_total_inventory_quantity(dummy: str = "") -> dict:
 class BillItemInput(BaseModel):
     product_id: int
     quantity: float
-
 @function_tool
 def create_draft_bill(
     ctx: RunContextWrapper[TelegramContext],
     items: list[BillItemInput],
     customer_id: int | None = None
 ) -> dict:
-    """
-    Create a draft bill for requested products.
-
-    Each item contains:
-    - product_id
-    - quantity
-
-    This tool only creates a DRAFT.
-    It does not deduct stock or finalize payment.
-    """
 
     db = SessionLocal()
 
     try:
-
         bill_items = [
             BillItemRequest(
                 product_id=item.product_id,
@@ -340,6 +328,10 @@ def create_draft_bill(
             bill.bill_number
         )
 
+        print(
+            f"[BILL] Pending confirmation stored for chat_id={chat_id}"
+        )
+
         return {
             "bill_number": bill.bill_number,
             "status": bill.status,
@@ -352,6 +344,8 @@ def create_draft_bill(
     except Exception as e:
 
         db.rollback()
+
+        print(f"[BILL ERROR] {e}")
 
         return {
             "error": str(e)
@@ -470,12 +464,14 @@ def is_confirmation(text: str) -> bool:
     confirmations = {
         "yes",
         "yes confirm",
+        "confirm bill"
         "confirm",
         "confirmed",
         "proceed",
         "go ahead",
         "okay",
-        "ok"
+        "ok",
+        "yes finalize"
         }
 
     normalized = text.strip().lower()
@@ -542,7 +538,7 @@ def _confirm_pending_bill(
     finally:
         db.close()
 
-
+@function_tool
 def confirm_pending_bill(
     chat_id: str,
     payment_mode: str = "CASH",

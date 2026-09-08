@@ -14,6 +14,7 @@ from app.agent.tools import (
     create_draft_bill,
     edit_draft_bill,
     get_pending_bill,
+    confirm_pending_bill,
     add_khata_credit,
     settle_khata,
     get_khata_balance,
@@ -60,7 +61,6 @@ def load_owner_preferences():
 
 owner_preferences = load_owner_preferences()
 
-
 kirana_pilot = Agent(
     name="KiranaPilot",
 
@@ -84,6 +84,8 @@ kirana_pilot = Agent(
         create_draft_bill,
         edit_draft_bill,
         get_pending_bill,
+        confirm_pending_bill,
+
         add_khata_credit,
         settle_khata,
         get_khata_balance,
