@@ -1,11 +1,9 @@
 from pathlib import Path
+from datetime import datetime
 
-from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.enums import TA_CENTER
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -15,108 +13,71 @@ from reportlab.platypus import (
 )
 
 
-# ---------------------------------------------------------
-# FONTS
-# ---------------------------------------------------------
+def generate_invoice_pdf(bill):
 
-REGULAR_FONT = Path("C:/Windows/Fonts/segoeui.ttf")
-BOLD_FONT = Path("C:/Windows/Fonts/segoeuib.ttf")
+    output_dir = Path("data/invoices")
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-pdfmetrics.registerFont(
-    TTFont("SegoeUI", str(REGULAR_FONT))
-)
-
-pdfmetrics.registerFont(
-    TTFont("SegoeUI-Bold", str(BOLD_FONT))
-)
-
-
-# ---------------------------------------------------------
-# INVOICE PDF
-# ---------------------------------------------------------
-
-def generate_invoice_pdf(bill) -> str:
-
-    output_dir = Path("generated")
-    output_dir.mkdir(exist_ok=True)
-
-    file_path = output_dir / f"{bill.bill_number}.pdf"
+    file_path = (
+        output_dir
+        / f"{bill.bill_number}.pdf"
+    )
 
     document = SimpleDocTemplate(
         str(file_path),
         pagesize=A4,
-        rightMargin=35,
-        leftMargin=35,
-        topMargin=35,
-        bottomMargin=35
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
     )
 
     styles = getSampleStyleSheet()
 
-    normal_style = ParagraphStyle(
-        "InvoiceNormal",
-        parent=styles["Normal"],
-        fontName="SegoeUI",
-        fontSize=10
-    )
-
-    title_style = ParagraphStyle(
-        "InvoiceTitle",
-        parent=styles["Title"],
-        fontName="SegoeUI-Bold",
-        alignment=TA_CENTER,
-        fontSize=18,
-        spaceAfter=15
-    )
-
-    footer_style = ParagraphStyle(
-        "Footer",
-        parent=styles["Normal"],
-        fontName="SegoeUI",
-        alignment=TA_CENTER,
-        fontSize=9
-    )
-
     story = []
-
-    # -----------------------------------------------------
-    # HEADER
-    # -----------------------------------------------------
 
     story.append(
         Paragraph(
-            "GST TAX INVOICE",
-            title_style
+            "<b>KiranaPilot</b>",
+            styles["Title"]
         )
     )
+
+    story.append(
+        Paragraph(
+            "GST Invoice",
+            styles["Heading2"]
+        )
+    )
+
+    story.append(Spacer(1, 15))
 
     story.append(
         Paragraph(
             f"<b>Bill Number:</b> {bill.bill_number}",
-            normal_style
+            styles["Normal"]
         )
     )
 
     story.append(
         Paragraph(
-            f"<b>Status:</b> {bill.status}",
-            normal_style
+            f"<b>Date:</b> "
+            f"{bill.created_at.strftime('%d-%m-%Y %H:%M')}",
+            styles["Normal"]
         )
     )
 
     story.append(
         Paragraph(
-            f"<b>Payment Mode:</b> "
-            f"{bill.payment_mode or 'N/A'}",
-            normal_style
+            f"<b>Payment:</b> {bill.payment_mode}",
+            styles["Normal"]
         )
     )
 
-    story.append(Spacer(1, 18))
-
-    # -----------------------------------------------------
-    # ITEMS TABLE
-    # -----------------------------------------------------
+    story.append(Spacer(1, 20))
 
     table_data = [
         [
@@ -124,8 +85,6 @@ def generate_invoice_pdf(bill) -> str:
             "Qty",
             "Price",
             "GST",
-            "CGST",
-            "SGST",
             "Total"
         ]
     ]
@@ -141,30 +100,25 @@ def generate_invoice_pdf(bill) -> str:
         table_data.append(
             [
                 product_name,
-                f"{item.quantity:g}",
+                str(item.quantity),
                 f"₹{item.unit_price:.2f}",
                 f"{item.gst_rate:.2f}%",
-                f"₹{item.cgst:.2f}",
-                f"₹{item.sgst:.2f}",
                 f"₹{item.line_total:.2f}"
             ]
         )
 
-    items_table = Table(
+    table = Table(
         table_data,
-        repeatRows=1,
         colWidths=[
-            120,
-            40,
+            180,
+            50,
+            80,
             60,
-            45,
-            55,
-            55,
-            65
+            80
         ]
     )
 
-    items_table.setStyle(
+    table.setStyle(
         TableStyle(
             [
                 (
@@ -174,22 +128,10 @@ def generate_invoice_pdf(bill) -> str:
                     colors.lightgrey
                 ),
                 (
-                    "FONTNAME",
+                    "TEXTCOLOR",
                     (0, 0),
                     (-1, 0),
-                    "SegoeUI-Bold"
-                ),
-                (
-                    "FONTNAME",
-                    (0, 1),
-                    (-1, -1),
-                    "SegoeUI"
-                ),
-                (
-                    "FONTSIZE",
-                    (0, 0),
-                    (-1, -1),
-                    9
+                    colors.black
                 ),
                 (
                     "GRID",
@@ -205,68 +147,57 @@ def generate_invoice_pdf(bill) -> str:
                     "RIGHT"
                 ),
                 (
-                    "VALIGN",
+                    "FONTNAME",
                     (0, 0),
-                    (-1, -1),
-                    "MIDDLE"
-                ),
-                (
-                    "TOPPADDING",
-                    (0, 0),
-                    (-1, -1),
-                    6
+                    (-1, 0),
+                    "Helvetica-Bold"
                 ),
                 (
                     "BOTTOMPADDING",
                     (0, 0),
-                    (-1, -1),
-                    6
+                    (-1, 0),
+                    8
+                ),
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, 0),
+                    8
                 )
             ]
         )
     )
 
-    story.append(items_table)
+    story.append(table)
 
-    story.append(Spacer(1, 18))
+    story.append(Spacer(1, 20))
 
-    # -----------------------------------------------------
-    # TOTALS
-    # -----------------------------------------------------
-
-    totals_data = [
+    summary = [
         ["Subtotal", f"₹{bill.subtotal:.2f}"],
         ["CGST", f"₹{bill.cgst:.2f}"],
         ["SGST", f"₹{bill.sgst:.2f}"],
-        ["Grand Total", f"₹{bill.total:.2f}"]
+        ["Total", f"₹{bill.total:.2f}"]
     ]
 
-    totals_table = Table(
-        totals_data,
-        colWidths=[100, 100],
-        hAlign="RIGHT"
+    summary_table = Table(
+        summary,
+        colWidths=[380, 100]
     )
 
-    totals_table.setStyle(
+    summary_table.setStyle(
         TableStyle(
             [
                 (
-                    "FONTNAME",
-                    (0, 0),
+                    "ALIGN",
+                    (1, 0),
                     (-1, -1),
-                    "SegoeUI"
+                    "RIGHT"
                 ),
                 (
                     "FONTNAME",
                     (0, -1),
                     (-1, -1),
-                    "SegoeUI-Bold"
-                ),
-                (
-                    "ALIGN",
-                    (1, 0),
-                    (1, -1),
-                    "RIGHT"
+                    "Helvetica-Bold"
                 ),
                 (
                     "LINEABOVE",
@@ -274,31 +205,19 @@ def generate_invoice_pdf(bill) -> str:
                     (-1, -1),
                     1,
                     colors.black
-                ),
-                (
-                    "TOPPADDING",
-                    (0, 0),
-                    (-1, -1),
-                    5
-                ),
-                (
-                    "BOTTOMPADDING",
-                    (0, 0),
-                    (-1, -1),
-                    5
                 )
             ]
         )
     )
 
-    story.append(totals_table)
+    story.append(summary_table)
 
     story.append(Spacer(1, 25))
 
     story.append(
         Paragraph(
-            "Thank you for shopping with us.",
-            footer_style
+            "Thank you for shopping with us!",
+            styles["Normal"]
         )
     )
 

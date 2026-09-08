@@ -1,11 +1,8 @@
-from datetime import datetime, timedelta
 from pathlib import Path
+from datetime import datetime, timedelta
 
 from pptx import Presentation
-from pptx.chart.data import CategoryChartData
-from pptx.enum.chart import XL_CHART_TYPE
 from pptx.util import Inches, Pt
-
 
 from sqlalchemy import select
 
@@ -13,15 +10,22 @@ from app.infrastructure.database.database import SessionLocal
 from app.infrastructure.database.models import Bill
 
 
-GENERATED_DIR = Path("generated")
-GENERATED_DIR.mkdir(exist_ok=True)
-
-
 def generate_sales_analysis_deck(days: int = 7) -> str:
+
+    if days <= 0:
+        raise ValueError("DAYS_MUST_BE_POSITIVE")
+
+    output_dir = Path("data/reports")
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
     db = SessionLocal()
 
     try:
         end = datetime.utcnow()
+
         start = end - timedelta(days=days)
 
         bills = db.scalars(
@@ -29,131 +33,199 @@ def generate_sales_analysis_deck(days: int = 7) -> str:
                 Bill.status == "FINALIZED",
                 Bill.finalized_at >= start,
                 Bill.finalized_at <= end
-            ).order_by(Bill.finalized_at)
+            )
         ).all()
 
-        daily_sales = {}
+        total_sales = sum(
+            bill.total
+            for bill in bills
+        )
 
-        for bill in bills:
-            date = bill.finalized_at.strftime("%Y-%m-%d")
-
-            daily_sales.setdefault(
-                date,
-                {
-                    "sales": 0.0,
-                    "bills": 0
-                }
-            )
-
-            daily_sales[date]["sales"] += float(bill.total)
-            daily_sales[date]["bills"] += 1
-
-        dates = list(daily_sales.keys())
-        sales = [
-            round(daily_sales[d]["sales"], 2)
-            for d in dates
-        ]
-
-        total_sales = round(sum(sales), 2)
         total_bills = len(bills)
 
         average_bill = (
-            round(total_sales / total_bills, 2)
-            if total_bills
+            total_sales / total_bills
+            if total_bills > 0
             else 0
         )
 
-        # -----------------------------
-        # CREATE PRESENTATION
-        # -----------------------------
+        daily_sales = {}
 
-        prs = Presentation()
+        for i in range(days):
 
-        # Title slide
-        slide = prs.slides.add_slide(
-            prs.slide_layouts[0]
+            current_day = (
+                start + timedelta(days=i)
+            ).date()
+
+            daily_sales[current_day] = 0
+
+        for bill in bills:
+
+            if not bill.finalized_at:
+                continue
+
+            bill_day = bill.finalized_at.date()
+
+            if bill_day in daily_sales:
+                daily_sales[bill_day] += bill.total
+
+        presentation = Presentation()
+
+        # --------------------------------------------------
+        # TITLE SLIDE
+        # --------------------------------------------------
+
+        slide = presentation.slides.add_slide(
+            presentation.slide_layouts[0]
         )
 
-        slide.shapes.title.text = "KiranaPilot Sales Analysis"
+        slide.shapes.title.text = (
+            "KiranaPilot Sales Analysis"
+        )
 
         slide.placeholders[1].text = (
-            f"Last {days} days\n"
-            f"{start.strftime('%d %b %Y')} - "
-            f"{end.strftime('%d %b %Y')}"
+            f"Sales performance for the last {days} days"
         )
 
-        # Summary slide
-        slide = prs.slides.add_slide(
-            prs.slide_layouts[5]
+        # --------------------------------------------------
+        # SUMMARY SLIDE
+        # --------------------------------------------------
+
+        slide = presentation.slides.add_slide(
+            presentation.slide_layouts[5]
         )
 
-        title = slide.shapes.title
-        title.text = "Sales Summary"
+        slide.shapes.title.text = "Sales Summary"
+
+        summary_text = (
+            f"Total Sales: ₹{total_sales:.2f}\n\n"
+            f"Total Bills: {total_bills}\n\n"
+            f"Average Bill Value: ₹{average_bill:.2f}\n\n"
+            f"Analysis Period: {days} days"
+        )
 
         textbox = slide.shapes.add_textbox(
             Inches(1),
             Inches(1.7),
             Inches(8),
-            Inches(3)
+            Inches(4)
         )
 
-        frame = textbox.text_frame
+        text_frame = textbox.text_frame
 
-        lines = [
-            f"Total Sales: ₹{total_sales:.2f}",
-            f"Total Bills: {total_bills}",
-            f"Average Bill Value: ₹{average_bill:.2f}",
-        ]
+        paragraph = text_frame.paragraphs[0]
 
-        for i, line in enumerate(lines):
+        paragraph.text = summary_text
+        paragraph.font.size = Pt(24)
 
-            paragraph = (
-                frame.paragraphs[0]
-                if i == 0
-                else frame.add_paragraph()
-            )
+        # --------------------------------------------------
+        # DAILY SALES SLIDE
+        # --------------------------------------------------
 
-            paragraph.text = line
-            paragraph.font.size = Pt(24)
-
-        # Chart slide
-        slide = prs.slides.add_slide(
-            prs.slide_layouts[5]
+        slide = presentation.slides.add_slide(
+            presentation.slide_layouts[5]
         )
 
         slide.shapes.title.text = "Daily Sales"
 
-        chart_data = CategoryChartData()
-        chart_data.categories = dates
-        chart_data.add_series(
-            "Sales",
-            sales
+        rows = len(daily_sales) + 1
+
+        table = slide.shapes.add_table(
+            rows,
+            2,
+            Inches(1),
+            Inches(1.5),
+            Inches(7),
+            Inches(4.5)
+        ).table
+
+        table.cell(0, 0).text = "Date"
+        table.cell(0, 1).text = "Sales"
+
+        for row, (date, sales) in enumerate(
+            daily_sales.items(),
+            start=1
+        ):
+            table.cell(row, 0).text = (
+                date.strftime("%d-%m-%Y")
+            )
+
+            table.cell(row, 1).text = (
+                f"₹{sales:.2f}"
+            )
+
+        # --------------------------------------------------
+        # INSIGHTS SLIDE
+        # --------------------------------------------------
+
+        slide = presentation.slides.add_slide(
+            presentation.slide_layouts[5]
         )
 
-        chart = slide.shapes.add_chart(
-            XL_CHART_TYPE.COLUMN_CLUSTERED,
+        slide.shapes.title.text = "Key Insights"
+
+        highest_day = None
+        highest_sales = 0
+
+        for date, sales in daily_sales.items():
+
+            if sales > highest_sales:
+                highest_sales = sales
+                highest_day = date
+
+        if highest_day:
+
+            best_day_text = (
+                f"Highest sales day: "
+                f"{highest_day.strftime('%d-%m-%Y')}\n"
+                f"Sales: ₹{highest_sales:.2f}"
+            )
+
+        else:
+
+            best_day_text = (
+                "No finalized sales were recorded "
+                "during this period."
+            )
+
+        insight_text = (
+            f"{best_day_text}\n\n"
+            f"Total finalized bills: {total_bills}\n\n"
+            f"Average bill value: ₹{average_bill:.2f}\n\n"
+            "Only finalized bills are included "
+            "in this analysis."
+        )
+
+        textbox = slide.shapes.add_textbox(
             Inches(1),
             Inches(1.5),
             Inches(8),
-            Inches(4.5),
-            chart_data
-        ).chart
-
-        chart.has_legend = False
-        chart.has_title = True
-        chart.chart_title.text = "Sales by Day"
-
-        # Save
-        filename = (
-            f"sales_analysis_"
-            f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.pptx"
+            Inches(4.5)
         )
 
-        path = GENERATED_DIR / filename
+        paragraph = (
+            textbox.text_frame.paragraphs[0]
+        )
 
-        prs.save(path)
+        paragraph.text = insight_text
+        paragraph.font.size = Pt(20)
 
-        return str(path)
+        # --------------------------------------------------
+        # SAVE
+        # --------------------------------------------------
+
+        file_path = (
+            output_dir
+            / (
+                "sales_analysis_"
+                f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                ".pptx"
+            )
+        )
+
+        presentation.save(str(file_path))
+
+        return str(file_path)
 
     finally:
         db.close()

@@ -26,7 +26,9 @@ class InventoryService:
 
         statement = (
             select(Product)
-            .where(Product.name.ilike(f"%{query}%"))
+            .where(
+                Product.name.ilike(f"%{query}%")
+            )
             .order_by(Product.name)
         )
 
@@ -38,10 +40,15 @@ class InventoryService:
 
     def get_product(self, product_id: int):
 
-        product = self.db.get(Product, product_id)
+        product = self.db.get(
+            Product,
+            product_id
+        )
 
         if not product:
-            raise ValueError("PRODUCT_NOT_FOUND")
+            raise ValueError(
+                "PRODUCT_NOT_FOUND"
+            )
 
         return product
 
@@ -51,7 +58,9 @@ class InventoryService:
 
     def get_stock(self, product_id: int):
 
-        product = self.get_product(product_id)
+        product = self.get_product(
+            product_id
+        )
 
         return {
             "product_id": product.id,
@@ -61,7 +70,8 @@ class InventoryService:
             "unit": product.unit,
             "reorder_level": product.reorder_level,
             "low_stock": (
-                product.quantity <= product.reorder_level
+                product.quantity
+                <= product.reorder_level
             )
         }
 
@@ -81,7 +91,14 @@ class InventoryService:
         )
 
         if existing:
-            raise ValueError("SKU_ALREADY_EXISTS")
+            raise ValueError(
+                "SKU_ALREADY_EXISTS"
+            )
+
+        if request.quantity < 0:
+            raise ValueError(
+                "QUANTITY_CANNOT_BE_NEGATIVE"
+            )
 
         if request.sell_price > request.mrp:
             raise ValueError(
@@ -99,14 +116,11 @@ class InventoryService:
             category=request.category,
             unit=request.unit,
             is_loose=request.is_loose,
-
             cost_price=request.cost_price,
             sell_price=request.sell_price,
             mrp=request.mrp,
-
             quantity=request.quantity,
             reorder_level=request.reorder_level,
-
             gst_rate=request.gst_rate,
             hsn_code=request.hsn_code
         )
@@ -126,6 +140,11 @@ class InventoryService:
         request: ReceiveStockRequest
     ):
 
+        if request.quantity <= 0:
+            raise ValueError(
+                "RECEIVED_QUANTITY_MUST_BE_POSITIVE"
+            )
+
         product = self.get_product(
             request.product_id
         )
@@ -135,12 +154,27 @@ class InventoryService:
         product.quantity += request.quantity
 
         if request.cost_price is not None:
-            product.cost_price = request.cost_price
+
+            if request.cost_price <= 0:
+                raise ValueError(
+                    "COST_PRICE_MUST_BE_POSITIVE"
+                )
+
+            product.cost_price = (
+                request.cost_price
+            )
 
         if request.mrp is not None:
+
+            if request.mrp <= 0:
+                raise ValueError(
+                    "MRP_MUST_BE_POSITIVE"
+                )
+
             product.mrp = request.mrp
 
         if product.sell_price > product.mrp:
+
             self.db.rollback()
 
             raise ValueError(
@@ -167,12 +201,15 @@ class InventoryService:
         statement = (
             select(Product)
             .where(
-                Product.quantity <= Product.reorder_level
+                Product.quantity
+                <= Product.reorder_level
             )
             .order_by(Product.quantity)
         )
 
-        products = self.db.scalars(statement).all()
+        products = self.db.scalars(
+            statement
+        ).all()
 
         return [
             {
@@ -186,22 +223,36 @@ class InventoryService:
             for product in products
         ]
 
+    # ---------------------------------------------------------
+    # COUNT PRODUCTS
+    # ---------------------------------------------------------
+
     def count_products(self):
+
         statement = select(Product)
 
-        products = self.db.scalars(statement).all()
+        products = self.db.scalars(
+            statement
+        ).all()
 
         return {
             "product_count": len(products)
         }
 
+    # ---------------------------------------------------------
+    # LIST PRODUCTS
+    # ---------------------------------------------------------
+
     def list_products(self):
+
         statement = (
             select(Product)
             .order_by(Product.name)
         )
 
-        products = self.db.scalars(statement).all()
+        products = self.db.scalars(
+            statement
+        ).all()
 
         return [
             {
@@ -218,10 +269,17 @@ class InventoryService:
             for product in products
         ]
 
+    # ---------------------------------------------------------
+    # TOTAL INVENTORY QUANTITY
+    # ---------------------------------------------------------
+
     def get_total_quantity(self):
+
         statement = select(Product)
 
-        products = self.db.scalars(statement).all()
+        products = self.db.scalars(
+            statement
+        ).all()
 
         total_quantity = sum(
             product.quantity

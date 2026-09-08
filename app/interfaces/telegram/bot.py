@@ -16,7 +16,6 @@ from app.interfaces.telegram.handlers import (
 def create_bot():
 
     if not settings.telegram_bot_token:
-
         raise RuntimeError(
             "TELEGRAM_BOT_TOKEN is not configured."
         )
@@ -54,3 +53,7 @@ def run_bot():
     print("=" * 60)
 
     application.run_polling()
+
+
+if __name__ == "__main__":
+    run_bot()

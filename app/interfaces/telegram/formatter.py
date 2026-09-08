@@ -1,9 +1,11 @@
-def format_response(text: str) -> str:
-    """
-    Keeps Telegram responses clean and readable.
-    """
+def format_response(response) -> str:
 
-    if not text:
-        return "I couldn't generate a response."
+    if response is None:
+        return ""
 
-    return text.strip()
+    response = str(response).strip()
+
+    if not response:
+        return ""
+
+    return response

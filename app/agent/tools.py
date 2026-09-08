@@ -1,5 +1,7 @@
 from agents import function_tool
 from pydantic import BaseModel
+from dataclasses import dataclass
+from agents import RunContextWrapper
 
 from app.domain.preferences.service import PreferenceService
 from datetime import datetime, timedelta
@@ -9,7 +11,6 @@ from app.infrastructure.database.database import SessionLocal
 from app.domain.inventory.service import InventoryService
 
 from app.domain.billing.service import BillingService
-from app.documents.analysis_deck import generate_sales_analysis_deck
 from app.documents.analysis_deck import generate_sales_analysis_deck
 
 from app.documents.invoice import generate_invoice_pdf
@@ -39,6 +40,11 @@ from app.infrastructure.database.models import (
 )
 
 from app.domain.billing.service import BillingService
+
+
+@dataclass
+class TelegramContext:
+    chat_id: str
 
 def product_to_dict(product):
     return {
@@ -283,6 +289,7 @@ class BillItemInput(BaseModel):
 
 @function_tool
 def create_draft_bill(
+    ctx: RunContextWrapper[TelegramContext],
     items: list[BillItemInput],
     customer_id: int | None = None
 ) -> dict:
@@ -318,9 +325,21 @@ def create_draft_bill(
 
         bill = service.create_draft_bill(request)
 
-        confirmation_manager.set_pending(
-        bill.bill_number
+        chat_id = ctx.context.chat_id
+
+        print(
+            f"[BILL] Created draft {bill.bill_number}"
         )
+
+        print(
+            f"[BILL] Telegram chat_id = {chat_id}"
+        )
+
+        confirmation_manager.set_pending(
+            chat_id,
+            bill.bill_number
+        )
+
         return {
             "bill_number": bill.bill_number,
             "status": bill.status,
@@ -400,14 +419,13 @@ def edit_draft_bill(
     finally:
         db.close()
 
-
 @function_tool
-def get_pending_bill(dummy: str = "") -> dict:
+def get_pending_bill(chat_id: str) -> dict:
     """
-    Get the currently pending draft bill awaiting confirmation.
+    Get the pending draft bill associated with the current Telegram chat.
     """
 
-    pending = confirmation_manager.get_pending()
+    pending = confirmation_manager.get_pending(chat_id)
 
     if not pending:
         return {
@@ -417,7 +435,6 @@ def get_pending_bill(dummy: str = "") -> dict:
     db = SessionLocal()
 
     try:
-
         service = BillingService(db)
 
         bill = service.get_draft_bill(
@@ -432,16 +449,16 @@ def get_pending_bill(dummy: str = "") -> dict:
             "sgst": bill.sgst,
             "total": bill.total,
             "items": [
-            {
-                "product_id": item.product_id,
-                "product_name": (
-                    item.product.name
-                    if item.product
-                    else f"Product #{item.product_id}"
-                ),
-                "quantity": item.quantity,
-                "unit_price": item.unit_price
-            }
+                {
+                    "product_id": item.product_id,
+                    "product_name": (
+                        item.product.name
+                        if item.product
+                        else f"Product #{item.product_id}"
+                    ),
+                    "quantity": item.quantity,
+                    "unit_price": item.unit_price
+                }
                 for item in bill.items
             ]
         }
@@ -479,12 +496,14 @@ def is_cancellation(text: str) -> bool:
     normalized = text.strip().lower()
 
     return normalized in cancellations  
+
 def _confirm_pending_bill(
+    chat_id: str,
     payment_mode: str,
     payment_reference: str
 ) -> dict:
 
-    pending = confirmation_manager.get_pending()
+    pending = confirmation_manager.get_pending(chat_id)
 
     if not pending:
         return {
@@ -502,7 +521,7 @@ def _confirm_pending_bill(
             payment_reference if payment_reference else None
         )
 
-        confirmation_manager.clear()
+        confirmation_manager.clear(chat_id)
 
         return {
             "bill_number": bill.bill_number,
@@ -513,6 +532,7 @@ def _confirm_pending_bill(
         }
 
     except Exception as e:
+
         db.rollback()
 
         return {
@@ -522,19 +542,15 @@ def _confirm_pending_bill(
     finally:
         db.close()
 
-@function_tool
-def confirm_pending_bill(
-    payment_mode: str,
-    payment_reference: str
-) -> dict:
-    """
-    Finalize the pending draft bill.
 
-    payment_mode must be CASH, UPI, CARD, or CREDIT.
-    payment_reference can be an empty string when not applicable.
-    """
+def confirm_pending_bill(
+    chat_id: str,
+    payment_mode: str = "CASH",
+    payment_reference: str = ""
+) -> dict:
 
     return _confirm_pending_bill(
+        chat_id=chat_id,
         payment_mode=payment_mode,
         payment_reference=payment_reference
     )
@@ -720,36 +736,6 @@ def get_daily_sales_summary(dummy: str = "") -> dict:
     finally:
         db.close()
 
-@function_tool
-def generate_sales_analysis(
-    days: int = 7
-) -> dict:
-    """
-    Generate a PowerPoint sales analysis deck.
-
-    Use this when the owner asks for:
-    - sales analysis
-    - sales report
-    - sales presentation
-    - weekly sales analysis
-    - sales PPT
-    - sales deck
-    """
-
-    try:
-        file_path = generate_sales_analysis_deck(days)
-
-        return {
-            "status": "SUCCESS",
-            "file_path": file_path,
-            "days": days
-        }
-
-    except Exception as e:
-        return {
-            "status": "ERROR",
-            "error": str(e)
-        }
 
 @function_tool
 def set_owner_preference(
@@ -794,7 +780,7 @@ def get_owner_preferences(dummy: str = "") -> dict:
         db.close()
 
 @function_tool
-def generate_sales_deck(days: int = 7) -> dict:
+def generate_sales_analysis(days: int = 7) -> dict:
     """
     Generate a PowerPoint sales analysis deck.
 

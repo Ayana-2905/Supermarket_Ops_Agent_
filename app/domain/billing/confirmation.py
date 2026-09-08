@@ -6,26 +6,81 @@ from app.domain.billing.state import PendingBill
 class ConfirmationManager:
 
     def __init__(self):
-        self.pending_bill: PendingBill | None = None
+        self.pending_bills = {}
 
-    def set_pending(self, bill_number: str):
-        self.pending_bill = PendingBill(
+    def set_pending(
+        self,
+        chat_id: str,
+        bill_number: str
+    ):
+        print(
+            f"[CONFIRMATION] SET pending: "
+            f"chat_id={chat_id}, bill={bill_number}"
+        )
+
+        self.pending_bills[chat_id] = PendingBill(
             bill_number=bill_number,
             created_at=datetime.utcnow()
         )
 
-    def get_pending(self):
-        if not self.pending_bill:
+        print(
+            f"[CONFIRMATION] Current pending bills: "
+            f"{self.pending_bills}"
+        )
+
+    def get_pending(
+        self,
+        chat_id: str
+    ):
+        print(
+            f"[CONFIRMATION] GET pending: "
+            f"chat_id={chat_id}"
+        )
+
+        print(
+            f"[CONFIRMATION] Available chat IDs: "
+            f"{list(self.pending_bills.keys())}"
+        )
+
+        pending = self.pending_bills.get(chat_id)
+
+        if not pending:
+            print(
+                "[CONFIRMATION] NO PENDING BILL"
+            )
             return None
 
-        # Expire confirmation after 10 minutes
-        if datetime.utcnow() - self.pending_bill.created_at > timedelta(
-            minutes=10
+        if (
+            datetime.utcnow() - pending.created_at
+            > timedelta(minutes=10)
         ):
-            self.pending_bill = None
+            print(
+                "[CONFIRMATION] Pending bill expired"
+            )
+
+            self.pending_bills.pop(
+                chat_id,
+                None
+            )
+
             return None
 
-        return self.pending_bill
+        print(
+            f"[CONFIRMATION] FOUND bill: "
+            f"{pending.bill_number}"
+        )
 
-    def clear(self):
-        self.pending_bill = None
+        return pending
+
+    def clear(
+        self,
+        chat_id: str
+    ):
+        print(
+            f"[CONFIRMATION] CLEAR chat_id={chat_id}"
+        )
+
+        self.pending_bills.pop(
+            chat_id,
+            None
+        )
