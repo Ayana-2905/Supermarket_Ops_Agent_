@@ -42,7 +42,8 @@ All demonstrations below were performed through the **Telegram interface**.
 
 **Sale confirmation:** Confirmed the bill through Telegram and finalized the sale with payment recorded.
 
-![Billing and confirmation](demo_telegram_billing.png)
+![Billing](6.draft_bill.png)
+![Confirmation](7.finalize_bill.png)
 
 ---
 
