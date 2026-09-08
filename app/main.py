@@ -470,6 +470,7 @@ def finalize_bill(
         "total": bill.total,
         "finalized_at": bill.finalized_at
     }
+
 @app.get("/debug/sales-analysis")
 def sales_analysis(days: int = 7):
     return generate_sales_analysis(days)

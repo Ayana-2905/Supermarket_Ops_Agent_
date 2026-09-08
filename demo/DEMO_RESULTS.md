@@ -18,7 +18,7 @@ All demonstrations below were performed through the **Telegram interface**.
 
 ![Receive and check stock](3.%20received%20and%20checked%20.jpeg)
 
-**Inventory count and listing:** Returned the number of products currently registered and displayed product catalog.
+**Inventory count and listing:** Returned the number of products currently registered and displayed the product catalog.
 
 ![Product count](4.product%20count.jpeg)
 
@@ -31,18 +31,17 @@ All demonstrations below were performed through the **Telegram interface**.
 ![Khata](5.khata.jpeg)
 
 ---
+
 ## 3. Billing
 
 **Draft bill:** Created a bill for multiple products.
 
 ![Draft Bill](6.draft_bill.png)
 
-![Billing](6.draft_bill.png)
-![Confirmation](7.finalize_bill.png)
-=======
 **Sale confirmation:** Confirmed the draft bill and completed the sale.
 
 ![Finalized Bill](7.finalize_bill.png)
+
 ---
 
 ## Verified Features
@@ -59,10 +58,3 @@ All demonstrations below were performed through the **Telegram interface**.
 - ✅ Khata transactions
 - ✅ Khata payment/settlement
 - ✅ Telegram-based interaction
-"""
-
-out = os.path.join(demo_dir, "DEMO_RESULTS.md")
-pypandoc.convert_text(md, "md", format="md", outputfile=out, extra_args=["--standalone"])
-
-print(f"Created: {out}")
-print("Screenshots copied into:", demo_dir)
